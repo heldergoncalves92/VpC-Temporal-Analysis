@@ -8,9 +8,94 @@
 
 #include "includes.hpp"
 
+typedef struct sPos{
+    int i;
+    int j;
+    struct sPos *next;
+}*Pos,NPos;
+
+
+Pos addPos(Pos pos, int i, int j){
+    Pos p=(Pos)malloc(sizeof(NPos));
+    p->i=i;
+    p->j=j;
+    p->next=pos;
+    
+    return p;
+}
+
+
+
+
+// rearrange the quadrants of Fourier image  so that the origin is at the image center
+void fftShift(Mat image){
+    int cy,cx;
+    
+    cx = image.cols/2;
+    cy = image.rows/2;
+    
+    Mat q0(image, Rect(0, 0, cx, cy));   // Top-Left - Create a ROI per quadrant
+    Mat q1(image, Rect(cx, 0, cx, cy));  // Top-Right
+    Mat q2(image, Rect(0, cy, cx, cy));  // Bottom-Left
+    Mat q3(image, Rect(cx, cy, cx, cy)); // Bottom-Right
+    
+    Mat tmp;                           // swap quadrants (Top-Left with Bottom-Right)
+    q0.copyTo(tmp);
+    q3.copyTo(q0);
+    tmp.copyTo(q3);
+    
+    q1.copyTo(tmp);                    // swap quadrant (Top-Right with Bottom-Left)
+    q2.copyTo(q1);
+    tmp.copyTo(q2);
+    
+    normalize(image, image, 0, 1, CV_MINMAX); // Transform the matrix with float values into a
+    // viewable image form (float between values 0 and 1).
+    
+}
+
+
+void findRho(Mat rho, int r,int *num, int *x, int *y){
+    int i,j, aux, min=1000, max=0;
+    int stride = rho.cols*rho.rows;
+    
+    for (i=0; i<rho.cols; i++) {
+        for (j=0; j<rho.rows; j++) {
+            aux=(int)rho.at<float>(j, i);
+            
+           
+            if(aux<min) min=aux;
+            if(aux>max) max=aux;
+            
+            if(aux>0 &&  aux <= rho.cols/2+1){
+                x[aux*stride + num[aux]]=i;
+                y[aux*stride + num[aux]]=j;
+                num[aux]++;
+            }
+        }
+    }
+    
+}
+
+void impf(Mat magI, int* num, int* x, int* y, float* f){
+    float res;
+    int i,r;
+    int stride = magI.cols*magI.rows;
+
+    for(r=1; r<magI.cols/2+1; r++){
+        res=0.0;
+        for(i=0;i<num[r];i++){
+            //(resultado_da_dft)^2
+            res+= powf(magI.at<float>(y[r*stride+i],x[r*stride+i]),2);
+        }
+        //Mean
+        if(num[r]!=0)   f[r]= res/num[r];
+    }
+}
+
+
 int main(){
     
-    int m, n, cy, cx;
+    int m=720, n=1280, r, i, j, mX, mY ;
     Mat frame, padded;
     Mat planes[2], complexI;
     Mat magI;
@@ -22,6 +107,14 @@ int main(){
     Mat edges;
     namedWindow("edges",1);
     
+    //Inicializar a estrutura
+    
+    int *x = (int*)malloc((n/2+2)*(n*m)*sizeof(int));
+    int *y = (int*)malloc((n/2+2)*(n*m)*sizeof(int));
+    int *num = (int*)calloc(sizeof(int),n/2+2);
+    float *f=(float*)calloc(sizeof(float),n/2+2);
+    
+    
     while (true) {
     
         cap >> frame; // get a new frame from camera
@@ -30,6 +123,7 @@ int main(){
         int m = getOptimalDFTSize( frame.rows );
         int n = getOptimalDFTSize( frame.cols );
         
+        //printf("1-%d %d\n",m,n);
         // on the border add zero values
         copyMakeBorder(edges, padded, 0, m - edges.rows, 0, n - edges.cols, BORDER_CONSTANT, Scalar::all(0));
         
@@ -47,8 +141,6 @@ int main(){
         magnitude(planes[0], planes[1], planes[0]);// planes[0] = magnitude
         magI = planes[0];
         
-        
-        
         /************************  Expand and Rearrange *******************************/
         // switch to logarithmic scale
         magI += Scalar::all(1);
@@ -61,30 +153,87 @@ int main(){
         
         /************************  fftShift  *******************************/
         // rearrange the quadrants of Fourier image  so that the origin is at the image center
-        cx = magI.cols/2;
-        cy = magI.rows/2;
+        fftShift(magI);
         
-        Mat q0(magI, Rect(0, 0, cx, cy));   // Top-Left - Create a ROI per quadrant
-        Mat q1(magI, Rect(cx, 0, cx, cy));  // Top-Right
-        Mat q2(magI, Rect(0, cy, cx, cy));  // Bottom-Left
-        Mat q3(magI, Rect(cx, cy, cx, cy)); // Bottom-Right
         
-        Mat tmp;                           // swap quadrants (Top-Left with Bottom-Right)
-        q0.copyTo(tmp);
-        q3.copyTo(q0);
-        tmp.copyTo(q3);
         
-        q1.copyTo(tmp);                    // swap quadrant (Top-Right with Bottom-Left)
-        q2.copyTo(q1);
-        tmp.copyTo(q2);
+        /******* Get coordinates of the power spectrum image *******/
+        Mat xx = Mat::zeros(magI.size(), CV_32F);
+        Mat yy = Mat::zeros(magI.size(), CV_32F);
+        Mat theta, rho;
         
-        normalize(magI, magI, 0, 1, CV_MINMAX); // Transform the matrix with float values into a
-        // viewable image form (float between values 0 and 1).
+        mY=-magI.rows/2;
+        for (i=0; i<magI.rows; i++) {
+            mX=-magI.cols/2;
+            for (j=0; j<magI.cols; j++) {
+                xx.at<float>(i, j)=(float)mX++;
+                yy.at<float>(i, j)=(float)mY;
+            }
+           // printf("%d ",mY);
+            mY++;
+        }
+        cartToPolar(xx, yy, rho, theta);
+        
+        
+        //Round
+        for (i=0; i<magI.cols; i++) {
+            for (j=0; j<magI.rows; j++) {
+                rho.at<float>(j, i)=cvRound(rho.at<float>(j, i));
+            }
+        }
+
+        /************************** CICLO *******************************/
+        
+        findRho(rho, r, num, x, y);
+        impf(magI, num, x, y, f);
+       
+       // for (j=1; j<magI.cols/2+1; j++)
+         //   printf("%f ", f[j]);
+        
+        //print
+        /* for (i=0; i<magI.cols; i++) {
+         for (j=0; j<magI.rows; j++) {
+         printf("%d ",(int)rho.at<float>(j, i));
+         }
+         }*/
+
+        
+        /*
+        m=6;
+        Mat xx = Mat::zeros(m , m, CV_32F);
+        Mat yy = Mat::zeros(m , m, CV_32F);
+        Mat theta, rho;
+        
+        mY=-m/2;
+        for (i=0; i<m; i++) {
+            mX=-m/2;
+            for (j=0; j<m; j++) {
+                xx.at<float>(i, j)=(float)mX++;
+                yy.at<float>(i, j)=(float)mY;
+            }
+            // printf("%d ",mY);
+            mY++;
+        }
+        
+        
+        
+        
+        cartToPolar(xx, yy, rho, theta);
+        
+        for (i=0; i<xx.rows; i++) {
+            for (j=0; j<xx.cols; j++) {
+                printf("%f ",(float)rho.at<float>(i, j));
+            }
+            printf("\n");
+        }
+        */
+        
+        
 
         
         
         
-     //   cvCartToPolar(, <#const CvArr *y#><#const CvArr *x#>, CvArr *magnitude)
+        
         
         
         imshow("spectrum magnitude", magI);
