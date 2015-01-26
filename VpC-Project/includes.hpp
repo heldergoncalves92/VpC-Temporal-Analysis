@@ -10,11 +10,11 @@
 #define VC_Projeto_includes_h
 
 #include <iostream>
-#include <core.hpp>
-#include <imgproc.hpp>
-#include <highgui.hpp>
-#include <video.hpp>
-#include <features2d.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/video/video.hpp>
+#include <opencv2/features2d/features2d.hpp>
 
 
 using namespace cv;
