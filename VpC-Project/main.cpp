@@ -54,10 +54,11 @@ void fftShift(Mat image){
 }
 
 
-void findRho(Mat rho, int r,int *num, int *x, int *y){
+void findRho_impf(Mat rho, Mat magI, int *num, float *f){
     int i,j, aux, min=1000, max=0;
     int stride = rho.cols*rho.rows;
-    
+	float res;
+
     for (i=0; i<rho.cols; i++) {
         for (j=0; j<rho.rows; j++) {
             aux=(int)rho.at<float>(j, i);
@@ -66,30 +67,16 @@ void findRho(Mat rho, int r,int *num, int *x, int *y){
             if(aux<min) min=aux;
             if(aux>max) max=aux;
             
+			res = 0.0;
+
             if(aux>0 &&  aux <= rho.cols/2+1){
-                x[aux*stride + num[aux]]=i;
-                y[aux*stride + num[aux]]=j;
+				res += powf(magI.at<float>(j, i), 2);
                 num[aux]++;
             }
         }
+		if (num[i] != 0)   f[i] = res / num[i];
     }
-    
-}
 
-void impf(Mat magI, int* num, int* x, int* y, float* f){
-    float res;
-    int i,r;
-    int stride = magI.cols*magI.rows;
-
-    for(r=1; r<magI.cols/2+1; r++){
-        res=0.0;
-        for(i=0;i<num[r];i++){
-            //(resultado_da_dft)^2
-            res+= powf(magI.at<float>(y[r*stride+i],x[r*stride+i]),2);
-        }
-        //Mean
-        if(num[r]!=0)   f[r]= res/num[r];
-    }
 }
 
 
@@ -109,8 +96,7 @@ int main(){
     
     //Inicializar a estrutura
     
-    int *x = (int*)malloc((n/2+2)*(n*m)*sizeof(int));
-    int *y = (int*)malloc((n/2+2)*(n*m)*sizeof(int));
+
     int *num = (int*)calloc(sizeof(int),n/2+2);
     float *f=(float*)calloc(sizeof(float),n/2+2);
     
@@ -184,8 +170,8 @@ int main(){
 
         /************************** CICLO *******************************/
         
-        findRho(rho, r, num, x, y);
-        impf(magI, num, x, y, f);
+        
+		findRho_impf(rho, magI, num,f);
        
        // for (j=1; j<magI.cols/2+1; j++)
          //   printf("%f ", f[j]);
