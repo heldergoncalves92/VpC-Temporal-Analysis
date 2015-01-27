@@ -80,7 +80,8 @@ int main(){
     Mat planes[2], complexI;
     Mat magI;
     
-    VideoCapture cap(0); // open the default camera
+    //VideoCapture cap(0); // open the default camera
+	VideoCapture cap("Videos/approaching_lv_40ms_translate_approach.avi"); // open the default camera
     if(!cap.isOpened())  // check if we succeeded
         return -1;
     
@@ -94,9 +95,10 @@ int main(){
     float *f=(float*)calloc(sizeof(float),n/2+2);
     
     
-    while (true) {
+	while (cap.isOpened()) {
     
         cap >> frame; // get a new frame from camera
+
         cvtColor(frame, edges, CV_BGR2GRAY);
         
         int m = getOptimalDFTSize( frame.rows );
@@ -220,6 +222,6 @@ int main(){
     }
     // the camera will be deinitialized automatically in VideoCapture destructor
     
-    
+	cap.release();
     return 1;
 }
