@@ -55,28 +55,21 @@ void fftShift(Mat image){
 
 
 void findRho_impf(Mat rho, Mat magI, int *num, float *f){
-    int i,j, aux, min=1000, max=0;
-    int stride = rho.cols*rho.rows;
-	float res;
+    int i,j, r, min=1000, max=0;
 
     for (i=0; i<rho.cols; i++) {
         for (j=0; j<rho.rows; j++) {
-            aux=(int)rho.at<float>(j, i);
+            r=(int)rho.at<float>(j, i);
             
-           
-            if(aux<min) min=aux;
-            if(aux>max) max=aux;
-            
-			res = 0.0;
 
-            if(aux>0 &&  aux <= rho.cols/2+1){
-				res += powf(magI.at<float>(j, i), 2);
-                num[aux]++;
+            if(r>0 &&  r <= rho.cols/2+1){
+				f[r] += powf(magI.at<float>(j, i), 2);
+				num[r]++;
             }
         }
-		if (num[i] != 0)   f[i] = res / num[i];
     }
-
+	for (r = 1; r<magI.cols / 2; r++)
+		f[r] /= num[r];
 }
 
 
