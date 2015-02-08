@@ -89,8 +89,6 @@ int main(){
     namedWindow("edges",1);
     
     //Inicializar a estrutura
-    
-
     int *num = (int*)calloc(sizeof(int),n/2+2);
     float *f=(float*)calloc(sizeof(float),n/2+2);
 
