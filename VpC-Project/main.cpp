@@ -75,7 +75,7 @@ void findRho_impf(Mat rho, Mat magI, int *num, float *f){
 
 int main(){
     
-    int m=720, n=1280, r, i, j, mX, mY ;
+    int m, n, r, i, j, mX, mY ;
     Mat frame, padded;
     Mat planes[2], complexI;
     Mat magI;
@@ -93,20 +93,54 @@ int main(){
 
     int *num = (int*)calloc(sizeof(int),n/2+2);
     float *f=(float*)calloc(sizeof(float),n/2+2);
-    
-    
+
+    cap >> frame; // get a new frame from camera
+
+	m = frame.rows;
+	n = frame.cols;
+
+    int mdst = getOptimalDFTSize( m );
+
+	/******* Get coordinates of the power spectrum image *******/
+	Mat xx = Mat::zeros(Size(mdst, mdst), CV_32F);
+	Mat yy = Mat::zeros(Size(mdst, mdst), CV_32F);
+	Mat theta, rho;
+
+	mY = -mdst / 2;
+	for (i = 0; i<mdst; i++) {
+		mX = -mdst / 2;
+		for (j = 0; j<mdst; j++) {
+			xx.at<float>(i, j) = (float)mX++;
+			yy.at<float>(i, j) = (float)mY;
+		}
+		// printf("%d ",mY);
+		mY++;
+	}
+	cartToPolar(xx, yy, rho, theta);
+
+
+	//Round
+	for (i = 0; i<mdst; i++) {
+		for (j = 0; j<mdst; j++) {
+			rho.at<float>(j, i) = cvRound(rho.at<float>(j, i));
+		}
+	}
+
+
+	int nframe = 0;
 	while (cap.isOpened()) {
-    
-        cap >> frame; // get a new frame from camera
+
+		nframe++;
+        
+		if (nframe != 1)
+			cap >> frame; // get a new frame from camera
 
         cvtColor(frame, edges, CV_BGR2GRAY);
         
-        int m = getOptimalDFTSize( frame.rows );
-        int n = getOptimalDFTSize( frame.cols );
         
         //printf("1-%d %d\n",m,n);
         // on the border add zero values
-        copyMakeBorder(edges, padded, 0, m - edges.rows, 0, n - edges.cols, BORDER_CONSTANT, Scalar::all(0));
+		copyMakeBorder(edges, padded, 0, mdst - edges.rows, 0, mdst - edges.cols, BORDER_CONSTANT, Scalar::all(0));
         
         // Add to the expanded another plane with zeros
         planes[0] = Mat_<float>(padded);
@@ -138,36 +172,30 @@ int main(){
         
         
         
-        /******* Get coordinates of the power spectrum image *******/
-        Mat xx = Mat::zeros(magI.size(), CV_32F);
-        Mat yy = Mat::zeros(magI.size(), CV_32F);
-        Mat theta, rho;
-        
-        mY=-magI.rows/2;
-        for (i=0; i<magI.rows; i++) {
-            mX=-magI.cols/2;
-            for (j=0; j<magI.cols; j++) {
-                xx.at<float>(i, j)=(float)mX++;
-                yy.at<float>(i, j)=(float)mY;
-            }
-           // printf("%d ",mY);
-            mY++;
-        }
-        cartToPolar(xx, yy, rho, theta);
-        
-        
-        //Round
-        for (i=0; i<magI.cols; i++) {
-            for (j=0; j<magI.rows; j++) {
-                rho.at<float>(j, i)=cvRound(rho.at<float>(j, i));
-            }
-        }
 
         /************************** CICLO *******************************/
         
         
 		findRho_impf(rho, magI, num,f);
-       
+		
+
+
+		Vec4f line;
+		vector<Point2f> points;
+		int i = 0, tam = magI.rows/2+1;
+		for (i=2; i < tam;i++)
+				points.push_back(Point2f((float)log(i), (float)log(f[i])));
+
+		fitLine(points, line, CV_DIST_L1, 0, 0.1, 0.11);
+		float alpha = 0.0f;
+		//if(line[0] != 0.0f)
+			alpha = line[1] / line[0];
+		printf("%f\n", alpha);
+		//printf("%f - %f %f %f %f\n", alpha, line[0], line[1], line[2], line[3]);
+
+
+		
+
        // for (j=1; j<magI.cols/2+1; j++)
          //   printf("%f ", f[j]);
         
@@ -219,6 +247,9 @@ int main(){
         
         imshow("spectrum magnitude", magI);
         if(waitKey(30) >= 0) break;
+		memset(f, 0, (n / 2 + 2) * sizeof(float));
+
+
     }
     // the camera will be deinitialized automatically in VideoCapture destructor
     
