@@ -8,6 +8,13 @@
 
 #include "imageAnalysis.hpp"
 
+#define SIZE 1000
+
+
+FILE *f = fopen("register.data", "w");
+float alphaHistory[SIZE];
+int frame = 0;
+
 
 //Função gera histograma para array
 int* generateHistogram(Mat image){
@@ -28,4 +35,20 @@ int* generateHistogram(Mat image){
         }
     return hist;
 }
+
+
+void add_alpha(float alpha){
+    
+    fprintf(f, "%d %f\n",frame,alpha);
+    
+    alphaHistory[frame%SIZE]=alpha;
+    frame++;
+}
+
+
+
+
+
+
+
 
