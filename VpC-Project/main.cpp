@@ -92,6 +92,7 @@ int main(){
     int *num = (int*)calloc(sizeof(int),n/2+2);
     float *f=(float*)calloc(sizeof(float),n/2+2);
 
+
     cap >> frame; // get a new frame from camera
 
 	m = frame.rows;
@@ -223,6 +224,8 @@ int main(){
         }
         
         
+         
+         
         
         
         cartToPolar(xx, yy, rho, theta);
@@ -234,7 +237,6 @@ int main(){
             printf("\n");
         }
         */
-        
         
 
         
