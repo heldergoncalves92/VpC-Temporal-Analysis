@@ -68,8 +68,9 @@ int main(){
     Vec4f line;
     vector<Point2f> points;
     
-    //VideoCapture cap(0); // open the default camera
-	VideoCapture cap("videos/approaching_lv_40ms_translate_approach.avi"); // open the default camera
+    VideoCapture cap(0); // open the default camera
+	//VideoCapture cap("videos/approaching_lv_40ms_translate_approach.avi"); // open the default camera
+	//VideoCapture cap("videos/car2.avi"); // open the default camera
     if(!cap.isOpened())  // check if we succeeded
         return -1;
     
@@ -80,11 +81,14 @@ int main(){
 
 
 	m = frame.rows > frame.cols ? frame.rows : frame.cols;
-	resize(frame, frame, Size(m, m));//Resize to the largest side (TEMPORARY)
+	//resize(frame, frame, Size(m, m));//Resize to the largest side (TEMPORARY)
 
     int mdft = getOptimalDFTSize( m );
     arraySize = mdft/2+1;
     
+	
+
+
     //Init arrays
     int *num = (int*)calloc(sizeof(int),arraySize);
     float *f=(float*)calloc(sizeof(float),arraySize);
@@ -125,7 +129,7 @@ int main(){
         cvtColor(frame, edges, CV_BGR2GRAY);
         
         // on the border add zero values a.k.a. "windowbox"
-		copyMakeBorder(edges, padded, (mdft - edges.rows) / 2 + (mdft - edges.rows) % 2, (mdft - edges.rows) / 2, (mdft - edges.cols) / 2 + (mdft - edges.cols) / 2, (mdft - edges.cols) % 2, BORDER_CONSTANT, Scalar::all(0));
+		copyMakeBorder(edges, padded, (mdft - edges.rows) / 2 + (mdft - edges.rows) % 2, (mdft - edges.rows) / 2, (mdft - edges.cols) / 2 + (mdft - edges.cols) % 2, (mdft - edges.cols) / 2, BORDER_CONSTANT, Scalar::all(0));
         
         // Add to the expanded another plane with zeros
         planes[0] = Mat_<float>(padded);
@@ -178,7 +182,7 @@ int main(){
         points.clear();
         
         
-        imshow("spectrum magnitude", frame);
+		imshow("Original Video", padded);
         if(waitKey(30) >= 0) break;
         
     }
