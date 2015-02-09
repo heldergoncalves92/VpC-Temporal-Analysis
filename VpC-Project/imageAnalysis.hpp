@@ -11,7 +11,10 @@
 
 #include "includes.hpp"
 
-int* generateHistogram(Mat image);
 
+
+
+int* generateHistogram(Mat image);
+void add_alpha(float alpha);
 
 #endif /* defined(__VC_Projeto__imageAnalysis__) */

@@ -8,22 +8,7 @@
 
 #include "includes.hpp"
 
-typedef struct sPos{
-    int i;
-    int j;
-    struct sPos *next;
-}*Pos,NPos;
-
-
-Pos addPos(Pos pos, int i, int j){
-    Pos p=(Pos)malloc(sizeof(NPos));
-    p->i=i;
-    p->j=j;
-    p->next=pos;
-    
-    return p;
-}
-
+int arraySize;
 
 
 
@@ -55,51 +40,57 @@ void fftShift(Mat image){
 
 
 void findRho_impf(Mat rho, Mat magI, int *num, float *f){
-    int i,j, r, min=1000, max=0;
+    int i,j, r;
 
     for (i=0; i<rho.cols; i++) {
         for (j=0; j<rho.rows; j++) {
             r=(int)rho.at<float>(j, i);
             
-
-            if(r>0 &&  r <= rho.cols/2+1){
+            if(r>0 &&  r <= arraySize){
 				f[r] += powf(magI.at<float>(j, i), 2);
 				num[r]++;
             }
         }
     }
-	for (r = 1; r<magI.cols / 2; r++)
-		f[r] /= num[r];
+    for (r = 1; r<arraySize; r++)
+        if(num[r]!=0)
+            f[r] /= num[r];
 }
 
 
 int main(){
     
-    int m, r, i, j, mX, mY ;
+    int m, i, j, mX, mY ;
     Mat frame, padded;
     Mat planes[2], complexI;
     Mat magI;
+	float alpha;
+    Vec4f line;
+    vector<Point2f> points;
     
     //VideoCapture cap(0); // open the default camera
-	VideoCapture cap("Videos/approaching_lv_40ms_translate_approach.avi"); // open the video file
+	VideoCapture cap("videos/approaching_lv_40ms_translate_approach.avi"); // open the default camera
     if(!cap.isOpened())  // check if we succeeded
         return -1;
     
     Mat edges;
     namedWindow("edges",1);
-    
-    //Inicializar a estrutura
-    int *num = (int*)calloc(sizeof(int),m/2+2);
-    float *f=(float*)calloc(sizeof(float),m/2+2);
 
 	cap >> frame; // get a new frame from camera
 
-	m = frame.rows > frame.cols ? frame.cols :frame.rows;
-	resize(frame, frame, Size(m, m));
+
+	m = frame.rows > frame.cols ? frame.rows : frame.cols;
+	resize(frame, frame, Size(m, m));//Resize to the largest side (TEMPORARY)
 
     int mdft = getOptimalDFTSize( m );
-
-	/******* Get coordinates of the power spectrum image *******/
+    arraySize = mdft/2+1;
+    
+    //Init arrays
+    int *num = (int*)calloc(sizeof(int),arraySize);
+    float *f=(float*)calloc(sizeof(float),arraySize);
+    
+    
+	/************* Get coordinates of the power spectrum image ***********/
 	Mat xx = Mat::zeros(Size(mdft, mdft), CV_32F);
 	Mat yy = Mat::zeros(Size(mdft, mdft), CV_32F);
 	Mat theta, rho;
@@ -111,38 +102,29 @@ int main(){
 			xx.at<float>(i, j) = (float)mX++;
 			yy.at<float>(i, j) = (float)mY;
 		}
-		// printf("%d ",mY);
 		mY++;
 	}
 	cartToPolar(xx, yy, rho, theta);
 
 
-	//Round
-	for (i = 0; i<mdft; i++) {
-		for (j = 0; j<mdft; j++) {
+	//Round RHO
+	for (i = 0; i<mdft; i++)
+		for (j = 0; j<mdft; j++)
 			rho.at<float>(j, i) = cvRound(rho.at<float>(j, i));
-		}
-	}
 
 
 	int nframe = 0;
-	float alpha;
-	Vec4f line;
-	vector<Point2f> points;
-	int tam = magI.rows / 2 + 1;
-
+    
+    /************** START CYCLE ******************/
 	while (cap.isOpened()) {
 
-		nframe++;
+        cap >> frame; // get a new frame from camera
+        if(!frame.data) break;
 
-		if (nframe != 1){
-			cap >> frame;
-			resize(frame, frame, Size(m, m));}
-
+        nframe++;
         cvtColor(frame, edges, CV_BGR2GRAY);
         
-        
-        // on the border add zero values
+        // on the border add zero values a.k.a. "windowbox"
 		copyMakeBorder(edges, padded, (mdft - edges.rows) / 2 + (mdft - edges.rows) % 2, (mdft - edges.rows) / 2, (mdft - edges.cols) / 2 + (mdft - edges.cols) / 2, (mdft - edges.cols) % 2, BORDER_CONSTANT, Scalar::all(0));
         
         // Add to the expanded another plane with zeros
@@ -174,43 +156,35 @@ int main(){
         fftShift(magI);
         
         
-        
 
-        /************************** CICLO *******************************/
-        
-        
+        /************************OBTAIN ARRAY 'F' TO DIFERENTS 'R' *******************************/
 		findRho_impf(rho, magI, num,f);
 		
 
+        
+        
+		for (i=2; i < arraySize;i++)
+            points.push_back(Point2f((float)log(i), (float)log(f[i])));
 
-		
-		points.clear();
-		i = 0; tam = magI.rows / 2 + 1;
-		for (i=2; i < tam;i++)
-				points.push_back(Point2f((float)log(i), (float)log(f[i])));
-		
-		fitLine(points, line, CV_DIST_L1, 0, 0.01, 0.01);
+		fitLine(points, line, CV_DIST_L1, 0, 0.01, 0.01); //0.01 would be a good default value for reps and aeps.
 		alpha = 0.0f;
-		//if(line[0] != 0.0f)
-			alpha = line[1] / line[0];
-		printf("%f\n", alpha);
-		//printf("%f - %f %f %f %f\n", alpha, line[0], line[1], line[2], line[3]);
-
-
 		
+        alpha = line[1] / line[0];
+        add_alpha(alpha);
         
         
+        //Reset arrays 'F' & 'points' to a new iteration
+		memset(f, 0, arraySize * sizeof(float));
+        points.clear();
         
         
-        
-        
-        imshow("spectrum magnitude", magI);
+        imshow("spectrum magnitude", frame);
         if(waitKey(30) >= 0) break;
-		memset(f, 0, (m / 2 + 2) * sizeof(float));
-
-
+        
     }
-
+    // the camera will be deinitialized automatically in VideoCapture destructor
+    
+    cout << nframe;
 	cap.release();
     return 1;
 }
