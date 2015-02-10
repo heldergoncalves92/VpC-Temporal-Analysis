@@ -11,40 +11,40 @@
 #define SIZE 1000
 
 
-FILE *f = fopen("register.data", "w");
+FILE *falpha = fopen("register.data", "w");
+FILE *fdelta = fopen("derivate.data", "w");
+
 float alphaHistory[SIZE];
+float delta_AlphaHistory[SIZE];
+
 int frame = 0;
-
-
-//Função gera histograma para array
-int* generateHistogram(Mat image){
-    
-    int *hist=(int*)malloc(256*sizeof(int));
-    int i,j, grau;
-    
-    //Põe a Zeros o histograma
-    for (i=0; i<256; i++)
-        hist[i]=0;
-    
-    //Verifica o gru do pixel e adiciona no histograma
-    for ( i=0; i<image.rows; i++)
-        for ( j=0; j<image.cols; j++) {
-            
-            grau=image.at<uchar>(i, j);
-            hist[grau]+=1;
-        }
-    return hist;
-}
+int fActual=0, faux;
 
 
 void add_alpha(float alpha){
     
-    fprintf(f, "%d %f\n",frame,alpha);
+    faux=fActual;
+    fActual=frame%SIZE;
     
-    alphaHistory[frame%SIZE]=alpha;
+    alphaHistory[fActual]=alpha;
+    fprintf(falpha, "%d %f\n",frame,alpha);
+    
+    if(frame==0){
+        delta_AlphaHistory[0]=0;
+        fprintf(fdelta, "0 0.0\n");
+    }
+    else{
+        delta_AlphaHistory[fActual]=alpha - alphaHistory[faux] + delta_AlphaHistory[faux];
+        fprintf(fdelta,"%d %f\n",frame,delta_AlphaHistory[fActual]);
+    }
     frame++;
 }
 
+void add_points(float x, float y){
+    fprintf(falpha, "%f %f\n",x,y);
+}
+
+int get_nframes(){return frame;}
 
 
 

@@ -16,5 +16,9 @@
 
 int* generateHistogram(Mat image);
 void add_alpha(float alpha);
+int get_nframes();
+
+void add_points(float x, float y);
+
 
 #endif /* defined(__VC_Projeto__imageAnalysis__) */
