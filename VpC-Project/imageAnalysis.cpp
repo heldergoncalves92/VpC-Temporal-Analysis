@@ -28,7 +28,7 @@ void add_alpha(float alpha){
     fActual=frame%SIZE;
     
     alphaHistory[fActual]=alpha;
-    fprintf(falpha, "%d %f\n",frame,alpha);
+    fprintf(falpha, "%d\t%f\n",frame,alpha);
     
     if(frame==0){
         delta_AlphaHistory[0]=0;
@@ -36,7 +36,7 @@ void add_alpha(float alpha){
     }
     else{
         delta_AlphaHistory[fActual]=alpha - alphaHistory[faux] + delta_AlphaHistory[faux];
-        fprintf(fdelta,"%d %f\n",frame,delta_AlphaHistory[fActual]);
+        fprintf(fdelta,"%d\t%f\n",frame,delta_AlphaHistory[fActual]);
     }
     frame++;
 }

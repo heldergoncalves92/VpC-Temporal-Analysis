@@ -67,14 +67,14 @@ int main(){
     Mat frame, padded;
     Mat planes[2], complexI;
 
-    Mat magI;
+
 	float alpha;
     Vec4f line;
     vector<Point2f> points;
     
-    VideoCapture cap(0); // open the default camera
+    //VideoCapture cap(0); // open the default camera
 	//VideoCapture cap("videos/approaching_lv_40ms_translate_approach.avi"); // open the default camera
-	//VideoCapture cap("videos/car2.avi"); // open the default camera
+	VideoCapture cap("videos/car2.avi"); // open the default camera
 
     if(!cap.isOpened())  // check if we succeeded
         return -1;
@@ -120,7 +120,7 @@ int main(){
 	//Round RHO (Checked)
     for (i = 0; i<mdft; i++)
         for (j = 0; j<mdft; j++)
-			rho.at<float>(j, i) = cvRound(rho.at<float>(j, i));
+			rho.at<float>(j, i) = (float)cvRound(rho.at<float>(j, i));
 
     
     
