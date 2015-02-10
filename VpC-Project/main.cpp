@@ -8,7 +8,10 @@
 
 #include "includes.hpp"
 
+
 int arraySize;
+Mat magI, rho;
+
 
 
 
@@ -39,14 +42,14 @@ void fftShift(Mat image){
 }
 
 
-void findRho_impf(Mat rho, Mat magI, int *num, float *f){
+void findRho_impf(int *num, float *f){
     int i,j, r;
 
     for (i=0; i<rho.cols; i++) {
         for (j=0; j<rho.rows; j++) {
             r=(int)rho.at<float>(j, i);
             
-            if(r>0 &&  r <= arraySize){
+            if(r>0 && r<arraySize){
 				f[r] += powf(magI.at<float>(j, i), 2);
 				num[r]++;
             }
@@ -63,6 +66,7 @@ int main(){
     int m, i, j, mX, mY ;
     Mat frame, padded;
     Mat planes[2], complexI;
+
     Mat magI;
 	float alpha;
     Vec4f line;
@@ -71,6 +75,7 @@ int main(){
     VideoCapture cap(0); // open the default camera
 	//VideoCapture cap("videos/approaching_lv_40ms_translate_approach.avi"); // open the default camera
 	//VideoCapture cap("videos/car2.avi"); // open the default camera
+
     if(!cap.isOpened())  // check if we succeeded
         return -1;
     
@@ -78,6 +83,7 @@ int main(){
     namedWindow("edges",1);
 
 	cap >> frame; // get a new frame from camera
+
 
 
 	m = frame.rows > frame.cols ? frame.rows : frame.cols;
@@ -97,8 +103,8 @@ int main(){
 	/************* Get coordinates of the power spectrum image ***********/
 	Mat xx = Mat::zeros(Size(mdft, mdft), CV_32F);
 	Mat yy = Mat::zeros(Size(mdft, mdft), CV_32F);
-	Mat theta, rho;
-
+	Mat theta;
+    
 	mY = -mdft / 2;
 	for (i = 0; i<mdft; i++) {
 		mX = -mdft / 2;
@@ -111,13 +117,12 @@ int main(){
 	cartToPolar(xx, yy, rho, theta);
 
 
-	//Round RHO
-	for (i = 0; i<mdft; i++)
-		for (j = 0; j<mdft; j++)
+	//Round RHO (Checked)
+    for (i = 0; i<mdft; i++)
+        for (j = 0; j<mdft; j++)
 			rho.at<float>(j, i) = cvRound(rho.at<float>(j, i));
 
-
-	int nframe = 0;
+    
     
     /************** START CYCLE ******************/
 	while (cap.isOpened()) {
@@ -125,7 +130,6 @@ int main(){
         cap >> frame; // get a new frame from camera
         if(!frame.data) break;
 
-        nframe++;
         cvtColor(frame, edges, CV_BGR2GRAY);
         
         // on the border add zero values a.k.a. "windowbox"
@@ -137,7 +141,7 @@ int main(){
         merge(planes, 2, complexI);
         
         dft(complexI, complexI);            // this way the result may fit in the source matrix
-        
+ 
         /************************  MAGNITUDE *******************************/
         // compute the magnitude and switch to logarithmic scale
         // => log(1 + sqrt(Re(DFT(I))^2 + Im(DFT(I))^2))
@@ -160,35 +164,39 @@ int main(){
         fftShift(magI);
         
         
-
         /************************OBTAIN ARRAY 'F' TO DIFERENTS 'R' *******************************/
-		findRho_impf(rho, magI, num,f);
 		
 
         
-        
-		for (i=2; i < arraySize;i++)
+        findRho_impf( num,f);   //(Checked)
+
+       
+      
+        for (i=1; i < arraySize;i++)
             points.push_back(Point2f((float)log(i), (float)log(f[i])));
+
 
 		fitLine(points, line, CV_DIST_L1, 0, 0.01, 0.01); //0.01 would be a good default value for reps and aeps.
 		alpha = 0.0f;
-		
         alpha = line[1] / line[0];
         add_alpha(alpha);
         
         
         //Reset arrays 'F' & 'points' to a new iteration
 		memset(f, 0, arraySize * sizeof(float));
+        memset(num, 0, arraySize * sizeof(int));
         points.clear();
-        
+
         
 		imshow("Original Video", padded);
+
         if(waitKey(30) >= 0) break;
         
     }
     // the camera will be deinitialized automatically in VideoCapture destructor
     
-    cout << nframe;
 	cap.release();
+    
+    cout << "Nº frames: " << get_nframes() << endl;
     return 1;
 }
