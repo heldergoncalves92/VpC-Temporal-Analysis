@@ -66,27 +66,34 @@ int main(){
     int m, i, j, mX, mY ;
     Mat frame, padded;
     Mat planes[2], complexI;
+    Mat t;
 
 	float alpha;
     Vec4f line;
     vector<Point2f> points;
     
+    time_t timeI, timeF;
+    float seconds;
+    
     //VideoCapture cap(0); // open the default camera
-	VideoCapture cap("videos/approaching_lv_40ms_translate_approach.avi");
-    //VideoCapture cap("videos/1_bola.avi");
+    //VideoCapture cap("videos/approaching_lv_40ms_translate_approach.avi");
+    //VideoCapture cap("videos/car2.avi");
+    
+    //VideoCapture cap("videos/approaching_lv_40ms_with_scatered_backgroung.avi");
+    //VideoCapture cap("videos/2_bolas.avi");
+    VideoCapture cap("videos/1_bola.avi");
 
     if(!cap.isOpened())  // check if we succeeded
         return -1;
     
     Mat edges;
-    namedWindow("edges",1);
 
 	cap >> frame; // get a new frame from camera
     m = frame.rows > frame.cols ? frame.cols : frame.rows;
 
     int mdft = getOptimalDFTSize( m );
+    setDim(mdft);
     arraySize = mdft/2+1;
-    
 	
     
 
@@ -119,23 +126,24 @@ int main(){
 
     int framess=0;
     
+    time(&timeI);
     /************** START CYCLE ******************/
 	while (cap.isOpened()) {
 
         cap >> frame; // get a new frame from camera
         if(!frame.data) break;
         cvtColor(frame, edges, CV_BGR2GRAY);
-    
+        
         
         if(mdft > m){
             padded = edges(Rect((edges.cols - m) / 2, (edges.rows - m) / 2, m, m));
-            resize(edges, padded, Size(mdft,mdft));
+            resize(padded, padded, Size(mdft,mdft));
         }
         else
             padded = edges(Rect((edges.cols - mdft) / 2, (edges.rows - mdft) / 2, mdft, mdft));
         
+        
         GaussianBlur(padded, padded, Size(11,11), 1);
-      //  threshold(padded, padded, 140, 255, 0);
         
         
         // Add to the expanded another plane with zeros
@@ -184,14 +192,14 @@ int main(){
             add_alpha(alpha);
         else
             add_alpha(0);
-        
+        analisa();
         
         //Reset arrays 'F' & 'points' to a new iteration
 		memset(f, 0, arraySize * sizeof(float));
         memset(num, 0, arraySize * sizeof(int));
         points.clear();
 
-        cout<< framess++ <<endl;
+        //cout<< framess++ <<endl;
         
         imshow("D", padded );
         if(waitKey(30) >= 0) break;
@@ -200,7 +208,10 @@ int main(){
     // the camera will be deinitialized automatically in VideoCapture destructor
     
 	cap.release();
+    time(&timeF);
+    seconds = difftime(timeF, timeI);
     
     cout << "Nº frames: " << get_nframes() << endl;
+    printf ("Time: %f seconds\n",seconds);
     return 1;
 }

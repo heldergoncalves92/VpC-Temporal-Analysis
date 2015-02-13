@@ -21,6 +21,6 @@ plot "register.data"
 
 
 #PLOT SLOP DERIVATE
-set out "derivate.png"
-set yrange [-0.5 : 1]
+set out "derivative.png"
+set yrange [0 : 0.3]
 plot "derivate.data"
