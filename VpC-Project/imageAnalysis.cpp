@@ -18,7 +18,7 @@ float alphaHistory[SIZE];
 
 float delta_AlphaHistory[SIZE];
 
-int frame = 1;
+int frame = 0;
 int fActual=0, faux;
 
 
@@ -42,7 +42,7 @@ void add_alpha(float alpha){
 }
 
 void add_points(float x, float y){
-    fprintf(falpha, "%f\t%f\n",x,y);
+    fprintf(falpha, "%f %f\n",x,y);
 }
 
 int get_nframes(){return frame;}

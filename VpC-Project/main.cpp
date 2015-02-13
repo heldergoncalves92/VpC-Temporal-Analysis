@@ -67,14 +67,13 @@ int main(){
     Mat frame, padded;
     Mat planes[2], complexI;
 
-    Mat magI;
 	float alpha;
     Vec4f line;
     vector<Point2f> points;
     
-    VideoCapture cap(0); // open the default camera
-	//VideoCapture cap("videos/approaching_lv_40ms_translate_approach.avi"); // open the default camera
-	//VideoCapture cap("videos/car2.avi"); // open the default camera
+    //VideoCapture cap(0); // open the default camera
+	VideoCapture cap("videos/approaching_lv_40ms_translate_approach.avi");
+    //VideoCapture cap("videos/1_bola.avi");
 
     if(!cap.isOpened())  // check if we succeeded
         return -1;
@@ -83,17 +82,13 @@ int main(){
     namedWindow("edges",1);
 
 	cap >> frame; // get a new frame from camera
-
-
-
-	m = frame.rows > frame.cols ? frame.rows : frame.cols;
-	//resize(frame, frame, Size(m, m));//Resize to the largest side (TEMPORARY)
+    m = frame.rows > frame.cols ? frame.cols : frame.rows;
 
     int mdft = getOptimalDFTSize( m );
     arraySize = mdft/2+1;
     
 	
-
+    
 
     //Init arrays
     int *num = (int*)calloc(sizeof(int),arraySize);
@@ -122,18 +117,26 @@ int main(){
         for (j = 0; j<mdft; j++)
 			rho.at<float>(j, i) = cvRound(rho.at<float>(j, i));
 
-    
+    int framess=0;
     
     /************** START CYCLE ******************/
 	while (cap.isOpened()) {
 
         cap >> frame; // get a new frame from camera
         if(!frame.data) break;
-
         cvtColor(frame, edges, CV_BGR2GRAY);
+    
         
-        // on the border add zero values a.k.a. "windowbox"
-		copyMakeBorder(edges, padded, (mdft - edges.rows) / 2 + (mdft - edges.rows) % 2, (mdft - edges.rows) / 2, (mdft - edges.cols) / 2 + (mdft - edges.cols) % 2, (mdft - edges.cols) / 2, BORDER_CONSTANT, Scalar::all(0));
+        if(mdft > m){
+            padded = edges(Rect((edges.cols - m) / 2, (edges.rows - m) / 2, m, m));
+            resize(edges, padded, Size(mdft,mdft));
+        }
+        else
+            padded = edges(Rect((edges.cols - mdft) / 2, (edges.rows - mdft) / 2, mdft, mdft));
+        
+        GaussianBlur(padded, padded, Size(11,11), 1);
+      //  threshold(padded, padded, 140, 255, 0);
+        
         
         // Add to the expanded another plane with zeros
         planes[0] = Mat_<float>(padded);
@@ -163,23 +166,24 @@ int main(){
         // rearrange the quadrants of Fourier image  so that the origin is at the image center
         fftShift(magI);
         
-        
         /************************OBTAIN ARRAY 'F' TO DIFERENTS 'R' *******************************/
-		
+        findRho_impf(num,f);   //(Checked)
 
-        
-        findRho_impf( num,f);   //(Checked)
-
-       
       
-        for (i=1; i < arraySize;i++)
+        for (i=1; i < arraySize;i++){
+           // if(framess==10)
+             //   add_points(log(i), log(f[i]));
             points.push_back(Point2f((float)log(i), (float)log(f[i])));
+        }
 
 
-		fitLine(points, line, CV_DIST_L1, 0, 0.01, 0.01); //0.01 would be a good default value for reps and aeps.
+		fitLine(points, line, CV_DIST_L2, 0, 0.01, 0.01); //0.01 would be a good default value for reps and aeps.
 		alpha = 0.0f;
         alpha = line[1] / line[0];
-        add_alpha(alpha);
+        if(alpha<0)
+            add_alpha(alpha);
+        else
+            add_alpha(0);
         
         
         //Reset arrays 'F' & 'points' to a new iteration
@@ -187,9 +191,9 @@ int main(){
         memset(num, 0, arraySize * sizeof(int));
         points.clear();
 
+        cout<< framess++ <<endl;
         
-		imshow("Original Video", padded);
-
+        imshow("D", padded );
         if(waitKey(30) >= 0) break;
         
     }
