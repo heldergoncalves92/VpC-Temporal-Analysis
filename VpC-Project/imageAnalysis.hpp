@@ -11,12 +11,14 @@
 
 #include "includes.hpp"
 
-
+void setDim(int dim);
+Mat thresholdAdaptative(Mat original, Mat image);
 
 
 int* generateHistogram(Mat image);
 void add_alpha(float alpha);
 int get_nframes();
+int analisa();
 
 void add_points(float x, float y);
 
