@@ -76,9 +76,8 @@ int main(){
     float seconds;
     
     //VideoCapture cap(0); // open the default camera
-    //VideoCapture cap("videos/approaching_lv_40ms_translate_approach.avi");
-    //VideoCapture cap("videos/car2.avi");
-    
+
+    //VideoCapture cap("videos/y2.mov");
     //VideoCapture cap("videos/approaching_lv_40ms_with_scatered_backgroung.avi");
     //VideoCapture cap("videos/2_bolas.avi");
     VideoCapture cap("videos/1_bola.avi");
@@ -96,7 +95,6 @@ int main(){
     arraySize = mdft/2+1;
 	
     
-
     //Init arrays
     int *num = (int*)calloc(sizeof(int),arraySize);
     float *f=(float*)calloc(sizeof(float),arraySize);
@@ -124,7 +122,6 @@ int main(){
         for (j = 0; j<mdft; j++)
 			rho.at<float>(j, i) = cvRound(rho.at<float>(j, i));
 
-    int framess=0;
     
     time(&timeI);
     /************** START CYCLE ******************/
@@ -199,7 +196,6 @@ int main(){
         memset(num, 0, arraySize * sizeof(int));
         points.clear();
 
-        //cout<< framess++ <<endl;
         
         imshow("D", padded );
         if(waitKey(30) >= 0) break;

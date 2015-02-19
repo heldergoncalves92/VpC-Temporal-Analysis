@@ -15,7 +15,6 @@ void setDim(int dim);
 Mat thresholdAdaptative(Mat original, Mat image);
 
 
-int* generateHistogram(Mat image);
 void add_alpha(float alpha);
 int get_nframes();
 int analisa();
